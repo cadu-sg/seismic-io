@@ -1,3 +1,4 @@
+from ..Models.InOutSuModel import InOutSu
 
 def writesu(file_path, traces_data, hdr):
 	# Write a binary file in .su format
