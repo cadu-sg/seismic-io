@@ -1,5 +1,11 @@
-# Semic-io
+# Seismic-io
 Python package to read and write Seismic-Unix files (.su)
+
+## Install
+
+```
+pip install seismic-io
+```
 
 ## Available Functions
 
@@ -13,7 +19,7 @@ Take _`file_path`_ _string_ as the only param.
 
 **Usage Example:**
 ```py
-from seismicio import readsu
+from seismic_io import readsu
 readsu(file_path)
 ```
 
@@ -26,7 +32,7 @@ Take the same arguments and have the same return.
 
 **Usage Example:**
 ```py
-from seismicio import readsuInMemory
+from seismic_io import readsuInMemory
 readsuInMemory(file_path)
 ```
 
@@ -47,7 +53,7 @@ _array[object]_ of _`Header.getAllHeaders`_
 
 **Usage Example:**
 ```py
-from seismicio import writesu
+from seismic_io import writesu
 writesu(file_path)
 ```
 
@@ -60,6 +66,6 @@ Take the same arguments and have the same return.
 
 **Usage Example:**
 ```py
-from seismicio import writesuInMemory
+from seismic_io import writesuInMemory
 writesuInMemory(file_path)
 ```
