@@ -12,7 +12,7 @@ Take _`file_path`_ _string_ as the only param.
 
 
 **Usage Example:**
-```
+```py
 from seismicio import readsu
 readsu(file_path)
 ```
@@ -25,7 +25,7 @@ Take the same arguments and have the same return.
 
 
 **Usage Example:**
-```
+```py
 from seismicio import readsuInMemory
 readsuInMemory(file_path)
 ```
@@ -46,7 +46,7 @@ _array[object]_ of _`Header.getAllHeaders`_
 
 
 **Usage Example:**
-```
+```py
 from seismicio import writesu
 writesu(file_path)
 ```
@@ -59,7 +59,7 @@ Take the same arguments and have the same return.
 
 
 **Usage Example:**
-```
+```py
 from seismicio import writesuInMemory
 writesuInMemory(file_path)
 ```
