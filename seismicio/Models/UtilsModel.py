@@ -1,5 +1,6 @@
 import numpy as np
 from io import SEEK_END
+from ..constants.TRACE_HEADER_SIZE import TRACE_HEADER_SIZE
 
 class Utils():
 	def get_header_position(index, trace_data_size):
