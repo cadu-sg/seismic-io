@@ -2,12 +2,12 @@ from setuptools import setup, find_packages
 import codecs
 import os
 
-VERSION = '0.0.1'
+VERSION = '0.0.3'
 DESCRIPTION = 'Read and write .su files for seismic data'
 
 # Setting up
 setup(
-    name="seismic_io",
+    name="seismic-io",
     version=VERSION,
     author="cadu-sg",
     author_email="",
