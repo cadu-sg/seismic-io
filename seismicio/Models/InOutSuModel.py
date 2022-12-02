@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from .UtilsModel import Utils
 from ..constants.HEADER_FORMAT_STRING import HEADER_FORMAT_STRING
 from ..constants.TRACE_HEADER_SIZE import TRACE_HEADER_SIZE
+from ..constants.HEADER_KEYS import HEADER_KEYS
 
 # https://docs.python.org/3/library/struct.html#format-strings
 class InOutSu():

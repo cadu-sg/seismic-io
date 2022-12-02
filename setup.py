@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import codecs
 import os
 
-VERSION = '0.0.9'
+VERSION = '0.0.10'
 DESCRIPTION = 'Read and write .su files for seismic data'
 
 # Setting up
