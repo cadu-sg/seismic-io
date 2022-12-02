@@ -1,0 +1,4 @@
+include *.py
+recursive-include src/constants *.py
+recursive-include src/Models *.py
+recursive-include src/services *.py
