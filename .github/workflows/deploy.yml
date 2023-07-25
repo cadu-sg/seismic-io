@@ -1,0 +1,44 @@
+name: Publish
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '🚀New release✔') }}
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Update apt
+      run: sudo apt update
+
+    - name: Install pip
+      run: sudo apt install -y python3-pip
+
+    - name: Install build dependencies
+      run: pip3 install -r requirements.txt
+
+    - name: Upgrade release version
+      run: python3 .github/scripts/upgrade_version.py
+
+    - name: Build
+      run: python3 setup.py sdist bdist_wheel
+
+    - name: Install twine
+      run: python3 -m pip install build twine
+
+    - name: Debug JOB
+      run: ls && echo "run ls"
+
+    - name: Check dist before publish
+      run: twine check dist/*
+
+    # - name: Upload
+      # run: twine upload dist/*
+
+    - name: Commit and push updated version
+      run: git add seismicio/constants/__version__.py & git commit -m "🚀New release✔" & git push
