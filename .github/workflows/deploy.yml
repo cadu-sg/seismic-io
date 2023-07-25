@@ -31,9 +31,6 @@ jobs:
     - name: Install twine
       run: python3 -m pip install build twine
 
-    - name: Debug JOB
-      run: ls && echo "run ls"
-
     - name: Check dist before publish
       run: twine check dist/*
 
