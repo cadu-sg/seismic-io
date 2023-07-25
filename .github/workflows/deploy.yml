@@ -37,8 +37,8 @@ jobs:
     - name: Check dist before publish
       run: twine check dist/*
 
-    # - name: Upload
-      # run: twine upload dist/*
+    - name: Upload
+      run: twine upload dist/*
 
     - name: Commit and push updated version
       run: git add seismicio/constants/__version__.py & git commit -m "🚀New release✔" & git push
