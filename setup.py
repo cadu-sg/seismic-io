@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
+from seismicio.constants.__version__ import __version__
 import codecs
 import os
 
-VERSION = '0.0.11'
+VERSION = __version__
 DESCRIPTION = 'Read and write .su files for seismic data'
 
 # Setting up

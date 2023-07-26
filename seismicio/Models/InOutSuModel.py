@@ -3,12 +3,14 @@ import numpy as np
 from types import SimpleNamespace
 
 from .UtilsModel import Utils
+from .SuDataModel import SuData
 from ..constants.HEADER_FORMAT_STRING import HEADER_FORMAT_STRING
 from ..constants.TRACE_HEADER_SIZE import TRACE_HEADER_SIZE
 from ..constants.HEADER_KEYS import HEADER_KEYS
 
 # https://docs.python.org/3/library/struct.html#format-strings
 class InOutSu():
+    @staticmethod
     def unpack_su(file):
         # Read number of samples (how many values a trace has)
         file.seek(114)  # change stream position to byte 114
@@ -43,8 +45,9 @@ class InOutSu():
                 struct.unpack(data_format_string, data_bytes),
                 dtype=np.float32
             )
-
-        return traces_data, SimpleNamespace(**headers)
+        return SuData(traces_data, SimpleNamespace(**headers))
+    
+    @staticmethod
     def pack_and_save_su(file, traces_data, hdr):
         n_samples, n_traces = traces_data.shape
         trace_data_size = n_samples * 4

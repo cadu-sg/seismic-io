@@ -3,16 +3,20 @@ from io import SEEK_END
 from ..constants.TRACE_HEADER_SIZE import TRACE_HEADER_SIZE
 
 class Utils():
+	@staticmethod
 	def get_header_position(index, trace_data_size):
 		return (TRACE_HEADER_SIZE + trace_data_size) * index
 
+	@staticmethod
 	def get_data_position(index, trace_data_size):
 		return (TRACE_HEADER_SIZE + trace_data_size) * index + TRACE_HEADER_SIZE
 	
+	@staticmethod
 	def get_file_size(file):
 		file.seek(0, SEEK_END)
 		return file.tell()
 
+	@staticmethod
 	def new_empty_header(traces_amount):
 		header = {
 			'tracl': np.zeros(traces_amount, dtype=np.int32),

@@ -1,0 +1,57 @@
+name: Publish
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '🚀New release✔') }}
+    steps:
+    # setup env
+    - uses: actions/checkout@main
+
+    - name: Update apt
+      run: sudo apt update
+
+    - name: Install pip
+      run: sudo apt install -y python3-pip
+
+    - name: Install build dependencies
+      run: pip3 install -r requirements.txt
+
+    - name: Install twine
+      run: python3 -m pip install build twine
+
+    # Build
+    - name: Upgrade release version
+      run: python3 .github/scripts/upgrade_version.py
+
+    - name: Build
+      run: python3 setup.py sdist bdist_wheel
+
+    # Publish
+    - name: Check dist before publish
+      run: twine check dist/*
+
+    - name: Upload
+      run: twine upload dist/*
+
+    # Update on github
+    - name: git config email
+      run: git config user.email "cicd@bot.com"
+
+    - name: git config name
+      run: git config user.name "CICD BOT"
+
+    - name: Add __version__.py update
+      run: git add seismicio/constants/__version__.py
+
+    - name: Commit updated version
+      run: git commit -m "🚀New release✔" --author="CICD BOT <cicd@bot.com>"
+
+    - name: Push to main
+      run: git push
