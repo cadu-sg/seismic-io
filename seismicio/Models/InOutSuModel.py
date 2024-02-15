@@ -1,9 +1,8 @@
 import struct
 import numpy as np
-from types import SimpleNamespace
 
 from .UtilsModel import Utils
-from .SuDataModel import SuData
+from .SuDataModel import SuData, Header
 from ..constants.HEADER_FORMAT_STRING import HEADER_FORMAT_STRING
 from ..constants.TRACE_HEADER_SIZE import TRACE_HEADER_SIZE
 from ..constants.HEADER_KEYS import HEADER_KEYS
@@ -45,7 +44,7 @@ class InOutSu():
                 struct.unpack(data_format_string, data_bytes),
                 dtype=np.float32
             )
-        return SuData(traces_data, SimpleNamespace(**headers))
+        return SuData(traces_data, Header(**headers))
     
     @staticmethod
     def pack_and_save_su(file, traces_data, hdr):

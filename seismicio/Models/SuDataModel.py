@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+
+
 class SuData:
     def __init__(self, traces, headers):
         self.traces = traces
@@ -28,3 +31,11 @@ class SuData:
         stop_index = separation_indices[shot_index + 1]
 
         return self.traces[:, start_index:stop_index]
+
+
+class Header(SimpleNamespace):
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def __setitem__(self, key, value):
+        self.__dict__[key] = value
