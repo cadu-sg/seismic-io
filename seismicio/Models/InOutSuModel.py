@@ -10,7 +10,7 @@ from ..constants.HEADER_KEYS import HEADER_KEYS
 # https://docs.python.org/3/library/struct.html#format-strings
 class InOutSu():
     @staticmethod
-    def unpack_su(file):
+    def unpack_su(file, gather_keyword=None):
         # Read number of samples (how many values a trace has)
         file.seek(114)  # change stream position to byte 114
         bytes_to_unpack = file.read(2)  # read 2 bytes
@@ -21,9 +21,6 @@ class InOutSu():
         # Compute number of traces
         trace_data_size = trace_samples_amount * 4
         traces_amount = file_size // (trace_data_size + TRACE_HEADER_SIZE)
-
-        print(f'Number of samples: {trace_samples_amount}')
-        print(f'Number of traces: {traces_amount}')
 
         traces_data = np.zeros(shape=(trace_samples_amount, traces_amount), dtype=np.float32)
         headers = Utils.new_empty_header(traces_amount)
@@ -44,7 +41,7 @@ class InOutSu():
                 struct.unpack(data_format_string, data_bytes),
                 dtype=np.float32
             )
-        return SuData(traces_data, Header(**headers))
+        return SuData(traces_data, Header(**headers), gather_keyword)
     
     @staticmethod
     def pack_and_save_su(file, traces_data, hdr):
