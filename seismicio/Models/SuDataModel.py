@@ -23,6 +23,7 @@ class SuData:
         self.num_traces = traces.shape[1]
         self._gather_separation_indices = None
         self.num_gathers = None
+        self.gather_keyword = gather_keyword
         if gather_keyword != None:
             self._gather_separation_indices = self._compute_gather_separation_indices(gather_keyword)
             self.num_gathers = len(self._gather_separation_indices) - 1
@@ -50,7 +51,7 @@ class SuData:
         - The traces in the file are already sorted by the specified keyword.
 
         Args:
-            gather_index (int): The index of the gather. Check the trace_count
+            gather_index (int): The index of the gather. Check the num_gathers
               property to find out how many gathers are there.
 
         Returns:
@@ -61,6 +62,21 @@ class SuData:
         stop_index = self._gather_separation_indices[gather_index + 1]
 
         return self.traces[:, start_index:stop_index]
+
+    def _gather_value_to_index(self, gather_value : int):
+        
+        for gather_index in range(self.num_gathers):
+            if self.headers_from_gather(gather_index, self.gather_keyword)[0] == gather_value:
+                return gather_index
+
+
+    def traces_from_gather_value(self, gather_value : int):
+        return self.traces_from_gather(self._gather_value_to_index(gather_value))
+
+
+    def headers_from_gather_value(self, gather_value : int, keyword : str):
+        return self.headers_from_gather(self._gather_value_to_index(gather_value), keyword)
+
 
     def headers_from_gather(self, gather_index : int, keyword : str):
         """Get all the trace headers from the index-specified gather.
@@ -75,8 +91,6 @@ class SuData:
         """
         start_index = self._gather_separation_indices[gather_index]
         stop_index = self._gather_separation_indices[gather_index + 1]
-        print("start_index:", start_index)
-        print("stop_index:", stop_index)
 
         return self.headers[keyword][start_index:stop_index]   
 
