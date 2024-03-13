@@ -1,4 +1,15 @@
 from types import SimpleNamespace
+import numpy as np
+import numpy.typing as npt
+from .UtilsModel import Utils
+
+
+class Header(SimpleNamespace):
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def __setitem__(self, key, value):
+        self.__dict__[key] = value
 
 
 class SuData:
@@ -11,7 +22,7 @@ class SuData:
           specified at creation.
     """
 
-    def __init__(self, traces, headers, gather_keyword=None):
+    def __init__(self, traces: npt.NDArray[np.float_], headers: Header, gather_keyword=None):
         """Initialize the SuData
 
         Args:
@@ -25,8 +36,27 @@ class SuData:
         self.num_gathers = None
         self.gather_keyword = gather_keyword
         if gather_keyword != None:
-            self._gather_separation_indices = self._compute_gather_separation_indices(gather_keyword)
+            self._gather_separation_indices = self._compute_gather_separation_indices(
+                gather_keyword
+            )
             self.num_gathers = len(self._gather_separation_indices) - 1
+
+    @staticmethod
+    def new_empty_gathers(
+        num_samples_per_trace: int,
+        gather_keyword: str,
+        gather_values: list,
+        num_traces_per_gather: int,
+    ):
+        num_traces = num_traces_per_gather * len(gather_values)
+        traces = np.zeros(shape=(num_samples_per_trace, num_traces), dtype=float)
+        headers = Utils.new_empty_header(num_traces)
+        for i, value in enumerate(gather_values):
+            itrace_start = i * num_traces_per_gather
+            itrace_end = itrace_start + num_traces_per_gather
+            headers[gather_keyword][itrace_start:itrace_end] = value
+
+        return SuData(traces, Header(**headers), gather_keyword)
 
     @property
     def num_samples(self) -> int:
@@ -43,7 +73,7 @@ class SuData:
         separation_indices.append(self.num_traces)
         return separation_indices
 
-    def traces_from_gather(self, gather_index : int):
+    def traces_from_gather(self, gather_index: int):
         """Get all the data traces from the index-specified gather.
 
         In order to work correctly, this function needs two conditions met:
@@ -63,22 +93,18 @@ class SuData:
 
         return self.traces[:, start_index:stop_index]
 
-    def _gather_value_to_index(self, gather_value : int):
-        
+    def _gather_value_to_index(self, gather_value: int):
         for gather_index in range(self.num_gathers):
             if self.headers_from_gather(gather_index, self.gather_keyword)[0] == gather_value:
                 return gather_index
 
-
-    def traces_from_gather_value(self, gather_value : int):
+    def traces_from_gather_value(self, gather_value: int):
         return self.traces_from_gather(self._gather_value_to_index(gather_value))
 
-
-    def headers_from_gather_value(self, gather_value : int, keyword : str):
+    def headers_from_gather_value(self, gather_value: int, keyword: str):
         return self.headers_from_gather(self._gather_value_to_index(gather_value), keyword)
 
-
-    def headers_from_gather(self, gather_index : int, keyword : str):
+    def headers_from_gather(self, gather_index: int, keyword: str):
         """Get all the trace headers from the index-specified gather.
 
         Args:
@@ -92,12 +118,4 @@ class SuData:
         start_index = self._gather_separation_indices[gather_index]
         stop_index = self._gather_separation_indices[gather_index + 1]
 
-        return self.headers[keyword][start_index:stop_index]   
-
-
-class Header(SimpleNamespace):
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-    def __setitem__(self, key, value):
-        self.__dict__[key] = value
+        return self.headers[keyword][start_index:stop_index]
