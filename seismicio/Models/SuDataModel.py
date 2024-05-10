@@ -59,7 +59,7 @@ class SuFile:
         print(f"gather values len {len(gather_values)}")
 
         self.gather_indices = pd.DataFrame(
-            {"start": separation_indices[:-1], "end": separation_indices[1:]},
+            {"start": separation_indices[:-1], "stop": separation_indices[1:]},
             index=gather_values,
         )
 
@@ -88,7 +88,7 @@ class SuFile:
         """Number of samples per data trace."""
         return self.headers.ns[0]
 
-    def traces_from_gather(self, gather_index: int):
+    def traces_from_gather_index(self, gather_index: int):
         """Get all the data traces from the index-specified gather.
 
         In order to work correctly, this function needs two conditions met:
@@ -96,31 +96,22 @@ class SuFile:
         - The traces in the file are already sorted by the specified keyword.
 
         Args:
-            gather_index (int): The index of the gather. Check the num_gathers
-              property to find out how many gathers are there.
+          gather_index (int): The index of the gather. Check the num_gathers
+            property to find out how many gathers are there.
 
         Returns:
-            All traces from the specified gather.
-
+          All traces from the specified gather.
         """
-        # start = self.gather_indices
-        start_index = self._gather_separation_indices[gather_index]
-        stop_index = self._gather_separation_indices[gather_index + 1]
-
+        start_index = self.gather_indices["start"].iat[gather_index]
+        stop_index = self.gather_indices["stop"].iat[gather_index]
         return self.traces[:, start_index:stop_index]
 
-    def _gather_value_to_index(self, gather_value: int):
-        for gather_index in range(self.num_gathers):
-            if self.headers_from_gather(gather_index, self.gather_keyword)[0] == gather_value:
-                return gather_index
-
     def traces_from_gather_value(self, gather_value: int):
-        return self.traces_from_gather(self._gather_value_to_index(gather_value))
+        start_index = self.gather_indices["start"].at[gather_value]
+        stop_index = self.gather_indices["stop"].at[gather_value]
+        return self.traces[:, start_index:stop_index]
 
-    def headers_from_gather_value(self, gather_value: int, keyword: str):
-        return self.headers_from_gather(self._gather_value_to_index(gather_value), keyword)
-
-    def headers_from_gather(self, gather_index: int, keyword: str):
+    def headers_from_gather_index(self, gather_index: int, keyword: str):
         """Get all the trace headers from the index-specified gather.
 
         Args:
@@ -131,7 +122,34 @@ class SuFile:
             All headers from the specified gather.
 
         """
-        start_index = self._gather_separation_indices[gather_index]
-        stop_index = self._gather_separation_indices[gather_index + 1]
+        start_index = self.gather_indices["start"].iat[gather_index]
+        stop_index = self.gather_indices["stop"].iat[gather_index]
 
         return self.headers[keyword][start_index:stop_index]
+
+    def headers_from_gather_value(self, gather_value: int, keyword: str):
+        """Get all `keyword` headers from the value-specified gather.
+
+        Args:
+          gather_value (int): Value in the keyword that specifies the gather.
+          keyword (str): Which header to get, specified by its keyword.
+
+        Returns:
+          Within the specified gather, an array containing all values of the specified gather.
+        """
+        start_index = self.gather_indices["start"].at[gather_value]
+        stop_index = self.gather_indices["stop"].at[gather_value]
+
+        return self.headers[keyword][start_index:stop_index]
+
+    def gather_value_to_index(self, gather_value: int):
+        """Find out the integer position index of the gather with the given value"""
+        gather_values: pd.Index = self.gather_indices.index
+        gather_index = gather_values.get_loc(gather_value)
+        return gather_index
+
+    def gather_index_to_value(self, gather_index: int):
+        """Find out the value of the gather with the given integer position index"""
+        gather_values: pd.Index = self.gather_indices.index
+        gather_value = gather_values[gather_index]
+        return gather_value
