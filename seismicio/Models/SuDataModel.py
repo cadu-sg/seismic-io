@@ -2,6 +2,7 @@ from types import SimpleNamespace
 import numpy as np
 import numpy.typing as npt
 from .UtilsModel import Utils
+import pandas as pd
 
 
 class Header(SimpleNamespace):
@@ -12,21 +13,21 @@ class Header(SimpleNamespace):
         self.__dict__[key] = value
 
 
-class SuData:
+class SuFile:
     """Store the SU seismic data file.
 
     Attributes:
-        traces (ndarray): Data traces from the entire file.
-        headers (Header): Trace headers from the entire file.
-        gather_count (int): Number of gathers. None if gather_keyword was not
-          specified at creation.
+      traces (ndarray): Data traces from the entire file.
+      headers (Header): Trace headers from the entire file.
+      gather_count (int): Number of gathers. None if gather_keyword was not
+        specified at creation.
     """
 
     def __init__(self, traces: npt.NDArray[np.float_], headers: Header, gather_keyword=None):
         """Initialize the SuData
 
         Args:
-            gather_keyword: The header keyword that comprises the gathers.
+          gather_keyword: The header keyword that comprises the gathers.
 
         """
         self.traces = traces
@@ -35,11 +36,35 @@ class SuData:
         self._gather_separation_indices = None
         self.num_gathers = None
         self.gather_keyword = gather_keyword
-        if gather_keyword != None:
-            self._gather_separation_indices = self._compute_gather_separation_indices(
-                gather_keyword
-            )
-            self.num_gathers = len(self._gather_separation_indices) - 1
+
+        self.gather_indices = None
+
+        if gather_keyword is None:
+            print("NO GAHTER KEYWORD AADASPODUWAFNU")
+            return
+
+        # Compute gather index database
+
+        separation_indices = [0]
+        separation_key = self.headers[gather_keyword]
+
+        gather_values = [separation_key[0]]
+
+        for trace_index in range(1, self.num_traces):
+            if separation_key[trace_index] != separation_key[trace_index - 1]:
+                gather_values.append(separation_key[trace_index])
+                separation_indices.append(trace_index)
+        separation_indices.append(self.num_traces)
+
+        print(f"gather values len {len(gather_values)}")
+
+        self.gather_indices = pd.DataFrame(
+            {"start": separation_indices[:-1], "end": separation_indices[1:]},
+            index=gather_values,
+        )
+
+        self._gather_separation_indices = separation_indices
+        self.num_gathers = len(self._gather_separation_indices) - 1
 
     @staticmethod
     def new_empty_gathers(
@@ -56,22 +81,12 @@ class SuData:
             itrace_end = itrace_start + num_traces_per_gather
             headers[gather_keyword][itrace_start:itrace_end] = value
 
-        return SuData(traces, Header(**headers), gather_keyword)
+        return SuFile(traces, Header(**headers), gather_keyword)
 
     @property
     def num_samples(self) -> int:
         """Number of samples per data trace."""
         return self.headers.ns[0]
-
-    def _compute_gather_separation_indices(self, keyword):
-        # Header key word | SU keywords | SEGY trace header fields
-        separation_indices = [0]
-        separation_key = self.headers[keyword]
-        for trace_index in range(1, self.num_traces):
-            if separation_key[trace_index] != separation_key[trace_index - 1]:
-                separation_indices.append(trace_index)
-        separation_indices.append(self.num_traces)
-        return separation_indices
 
     def traces_from_gather(self, gather_index: int):
         """Get all the data traces from the index-specified gather.
@@ -88,6 +103,7 @@ class SuData:
             All traces from the specified gather.
 
         """
+        # start = self.gather_indices
         start_index = self._gather_separation_indices[gather_index]
         stop_index = self._gather_separation_indices[gather_index + 1]
 
