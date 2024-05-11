@@ -13,6 +13,75 @@ class Header(SimpleNamespace):
         self.__dict__[key] = value
 
 
+class GatherView:
+    def __init__(self, start: int, stop: int, origin_data, headers):
+        self.start = start
+        self.stop = stop
+        self.origin_data = origin_data
+        self.origin_headers = headers
+
+    @property
+    def data(self):
+        return self.origin_data[:, self.start : self.stop]
+
+    def header(self, keyword):
+        return self.origin_headers[keyword][self.start : self.stop]
+
+
+class iGatherIndexer:
+
+    def __init__(self, gather_indices: pd.DataFrame, origin_data, origin_headers):
+        self.gather_indices = gather_indices
+        self.origin_data = origin_data
+        self.origin_headers = origin_headers
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            start_index = self.gather_indices["start"].iat[key]
+            stop_index = self.gather_indices["stop"].iat[key]
+        elif isinstance(key, slice):
+            if (not key.step is None) or (key.step != 1):
+                raise ValueError("No support for step in slice!")
+            if key.start is None:
+                key.start = 0
+            if key.stop is None:
+                key.stop = self.gather_indices.shape[0] - 1  # number of gathers - 1
+            start_index = self.gather_indices["start"].iat[key.start]
+            stop_index = self.gather_indices["stop"].iat[key.stop]
+        else:
+            raise TypeError("key must be either int or ")
+        return GatherView(start_index, stop_index, self.origin_data, self.origin_headers)
+
+
+class GatherIndexer:
+
+    def __init__(self, gather_indices: pd.DataFrame, origin_data, origin_headers):
+        self.gather_indices = gather_indices
+        self.origin_data = origin_data
+        self.origin_headers = origin_headers
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            start_index = self.gather_indices["start"].at[key]
+            stop_index = self.gather_indices["stop"].at[key]
+            return GatherView(start_index, stop_index, self.origin_data, self.origin_headers)
+        if isinstance(key, slice):
+            if (not key.step is None) or (key.step != 1):
+                raise ValueError("No support for step in slice!")
+
+            if key.start is None:
+                start_index = 0
+            else:
+                start_index = self.gather_indices["start"].at[key.start]
+
+            if key.stop is None:
+                stop_index = self.origin_data.shape[1] - 1  # num_traces - 1
+            else:
+                stop_index = self.gather_indices["stop"].at[key.stop]
+        else:
+            raise TypeError
+
+
 class SuFile:
     """Store the SU seismic data file.
 
@@ -65,6 +134,9 @@ class SuFile:
 
         self._gather_separation_indices = separation_indices
         self.num_gathers = len(self._gather_separation_indices) - 1
+
+        self.gather = GatherIndexer(self.gather_indices, traces, headers)
+        self.igather = iGatherIndexer(self.gather_indices, traces, headers)
 
     @staticmethod
     def new_empty_gathers(
