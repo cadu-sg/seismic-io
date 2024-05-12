@@ -13,19 +13,32 @@ class Header(SimpleNamespace):
         self.__dict__[key] = value
 
 
+class HeadersView:
+    def __init__(self, start, stop, headers):
+        self._start = start
+        self._stop = stop
+        self._headers = headers
+
+    def __getitem__(self, header_keyword):
+        return self._headers[header_keyword][self._start : self._stop]
+
+
 class GatherView:
-    def __init__(self, start: int, stop: int, origin_data, headers):
-        self.start = start
-        self.stop = stop
-        self.origin_data = origin_data
-        self.origin_headers = headers
+    def __init__(self, start: int, stop: int, data, headers):
+        self._start = start
+        self._stop = stop
+        self._origin_data = data
+        self._origin_headers = headers
+        self._headers_view = HeadersView(start, stop, headers)
+        self.num_traces: int = stop - start
 
     @property
     def data(self):
-        return self.origin_data[:, self.start : self.stop]
+        return self._origin_data[:, self._start : self._stop]
 
-    def header(self, keyword):
-        return self.origin_headers[keyword][self.start : self.stop]
+    @property
+    def headers(self):
+        return self._headers_view
 
 
 class iGatherIndexer:
@@ -40,20 +53,22 @@ class iGatherIndexer:
             start_index = self.gather_indices["start"].iat[key]
             stop_index = self.gather_indices["stop"].iat[key]
         elif isinstance(key, slice):
-            if (not key.step is None) or (key.step != 1):
+            if (not key.step is None) and (key.step != 1):
                 raise ValueError("No support for step in slice!")
             if key.start is None:
-                key.start = 0
+                start_index = 0
+            else:
+                start_index = self.gather_indices["start"].iat[key.start]
             if key.stop is None:
-                key.stop = self.gather_indices.shape[0] - 1  # number of gathers - 1
-            start_index = self.gather_indices["start"].iat[key.start]
-            stop_index = self.gather_indices["stop"].iat[key.stop]
+                stop_index = self.origin_data.shape[1] - 1  # num_traces - 1
+            else:
+                stop_index = self.gather_indices["stop"].iat[key.stop - 1]
         else:
-            raise TypeError("key must be either int or ")
+            raise TypeError("key must be either int or slice!")
         return GatherView(start_index, stop_index, self.origin_data, self.origin_headers)
 
 
-class GatherIndexer:
+class vGatherIndexer:
 
     def __init__(self, gather_indices: pd.DataFrame, origin_data, origin_headers):
         self.gather_indices = gather_indices
@@ -61,58 +76,61 @@ class GatherIndexer:
         self.origin_headers = origin_headers
 
     def __getitem__(self, key):
+        print(f"key type {type(key)}")
         if isinstance(key, int):
             start_index = self.gather_indices["start"].at[key]
             stop_index = self.gather_indices["stop"].at[key]
-            return GatherView(start_index, stop_index, self.origin_data, self.origin_headers)
-        if isinstance(key, slice):
-            if (not key.step is None) or (key.step != 1):
+        elif isinstance(key, slice):
+            if (not key.step is None) and (key.step != 1):
                 raise ValueError("No support for step in slice!")
-
             if key.start is None:
                 start_index = 0
             else:
                 start_index = self.gather_indices["start"].at[key.start]
-
             if key.stop is None:
                 stop_index = self.origin_data.shape[1] - 1  # num_traces - 1
             else:
                 stop_index = self.gather_indices["stop"].at[key.stop]
         else:
-            raise TypeError
+            raise TypeError("key must be either int or slice!")
+        return GatherView(start_index, stop_index, self.origin_data, self.origin_headers)
 
 
 class SuFile:
-    """Store the SU seismic data file.
+    """Store and manipulate a seismic data file in SU format.
 
     Attributes:
-      traces (ndarray): Data traces from the entire file.
+      data (ndarray): Trace data from the entire file.
       headers (Header): Trace headers from the entire file.
-      gather_count (int): Number of gathers. None if gather_keyword was not
+      num_traces (int): Number of traces.
+      num_gathers (int): Number of gathers. None if gather_keyword was not
         specified at creation.
     """
 
-    def __init__(self, traces: npt.NDArray[np.float_], headers: Header, gather_keyword=None):
-        """Initialize the SuData
+    def __init__(self, data: npt.NDArray[np.float_], headers: Header, gather_keyword=None):
+        """Initialize the instance using already prepared data.
 
         Args:
-          gather_keyword: The header keyword that comprises the gathers.
-
+          data: Trace data for this instance.
+          headers: Trace headers for this instance.
+          gather_keyword: Header keyword that comprises the gathers.
         """
-        self.traces = traces
+        self.traces = data
         self.headers = headers
-        self.num_traces = traces.shape[1]
-        self._gather_separation_indices = None
-        self.num_gathers = None
+        self.num_traces = data.shape[1]
         self.gather_keyword = gather_keyword
 
-        self.gather_indices = None
+        self.num_gathers = None
+        self.gather_indices_df = None
+        self._vGatherIndexer = None
+        self._iGatherIndexer = None
 
+        # Ignore gather slicing capabilities if no gather keyword was given
         if gather_keyword is None:
-            print("NO GAHTER KEYWORD AADASPODUWAFNU")
             return
 
-        # Compute gather index database
+        # Set up gather slicing capabilites
+        # ---------------------------------
 
         separation_indices = [0]
         separation_key = self.headers[gather_keyword]
@@ -125,18 +143,15 @@ class SuFile:
                 separation_indices.append(trace_index)
         separation_indices.append(self.num_traces)
 
-        print(f"gather values len {len(gather_values)}")
-
-        self.gather_indices = pd.DataFrame(
+        self.gather_indices_df = pd.DataFrame(
             {"start": separation_indices[:-1], "stop": separation_indices[1:]},
             index=gather_values,
         )
 
-        self._gather_separation_indices = separation_indices
-        self.num_gathers = len(self._gather_separation_indices) - 1
+        self.num_gathers = len(separation_indices) - 1
 
-        self.gather = GatherIndexer(self.gather_indices, traces, headers)
-        self.igather = iGatherIndexer(self.gather_indices, traces, headers)
+        self._vGatherIndexer = vGatherIndexer(self.gather_indices_df, data, headers)
+        self._iGatherIndexer = iGatherIndexer(self.gather_indices_df, data, headers)
 
     @staticmethod
     def new_empty_gathers(
@@ -160,68 +175,59 @@ class SuFile:
         """Number of samples per data trace."""
         return self.headers.ns[0]
 
-    def traces_from_gather_index(self, gather_index: int):
-        """Get all the data traces from the index-specified gather.
+    @property
+    def gather(self) -> vGatherIndexer:
+        """Access a single gather or a group of gathers by label.
 
-        In order to work correctly, this function needs two conditions met:
-        - gather_keyword is set to a valid keyword when creating the object;
+        A (gather) label is gather keyword value that indentifies a specific
+        gather in the seismic data file.
+
+        When slicing by label, both the start and the stop are included, which
+        is contrary to usual python slices, where start is included but stop
+        is excluded.
+
+        Allowed inputs are:
+        - A single label, e.g. ``200``.
+        - A slice object with labels, e.g. ``200:201``.
+
+        In order to work correctly, this feature needs two conditions met:
+        - The ``gather_keyword`` attribute was set to a valid keyword when
+          creating the object.
         - The traces in the file are already sorted by the specified keyword.
-
-        Args:
-          gather_index (int): The index of the gather. Check the num_gathers
-            property to find out how many gathers are there.
-
-        Returns:
-          All traces from the specified gather.
         """
-        start_index = self.gather_indices["start"].iat[gather_index]
-        stop_index = self.gather_indices["stop"].iat[gather_index]
-        return self.traces[:, start_index:stop_index]
+        return self._vGatherIndexer
 
-    def traces_from_gather_value(self, gather_value: int):
-        start_index = self.gather_indices["start"].at[gather_value]
-        stop_index = self.gather_indices["stop"].at[gather_value]
-        return self.traces[:, start_index:stop_index]
+    @property
+    def igather(self) -> iGatherIndexer:
+        """Access a single gather or an interval of gathers by zero-based
+        integer position (index).
 
-    def headers_from_gather_index(self, gather_index: int, keyword: str):
-        """Get all the trace headers from the index-specified gather.
+        It provides lookups based on the order that the gathers were found in
+        the file. The first gather has index 0, the second has index 1, and so
+        forth.
 
-        Args:
-            gather_index (int): The index of the gather.
-            keyword (str): The header keyword to be obtained.
+        When slicing by index, the behaviour is the same as in usual Python
+        slices, that is, start is included but stop is excluded.
 
-        Returns:
-            All headers from the specified gather.
-
+        In order to work correctly, this feature needs two conditions met:
+        - The ``gather_keyword`` attribute was set to a valid keyword when
+          creating the object.
+        - The traces in the file are already sorted by the specified keyword.
         """
-        start_index = self.gather_indices["start"].iat[gather_index]
-        stop_index = self.gather_indices["stop"].iat[gather_index]
+        return self._iGatherIndexer
 
-        return self.headers[keyword][start_index:stop_index]
-
-    def headers_from_gather_value(self, gather_value: int, keyword: str):
-        """Get all `keyword` headers from the value-specified gather.
-
-        Args:
-          gather_value (int): Value in the keyword that specifies the gather.
-          keyword (str): Which header to get, specified by its keyword.
-
-        Returns:
-          Within the specified gather, an array containing all values of the specified gather.
-        """
-        start_index = self.gather_indices["start"].at[gather_value]
-        stop_index = self.gather_indices["stop"].at[gather_value]
-
-        return self.headers[keyword][start_index:stop_index]
+    @property
+    def gather_values(self):
+        return self.gather_indices_df.index.to_numpy()
 
     def gather_value_to_index(self, gather_value: int):
         """Find out the integer position index of the gather with the given value"""
-        gather_values: pd.Index = self.gather_indices.index
+        gather_values: pd.Index = self.gather_indices_df.index
         gather_index = gather_values.get_loc(gather_value)
         return gather_index
 
     def gather_index_to_value(self, gather_index: int):
         """Find out the value of the gather with the given integer position index"""
-        gather_values: pd.Index = self.gather_indices.index
+        gather_values: pd.Index = self.gather_indices_df.index
         gather_value = gather_values[gather_index]
         return gather_value
