@@ -107,7 +107,7 @@ class SuFile:
         specified at creation.
     """
 
-    def __init__(self, data: npt.NDArray[np.float_], headers: Header, gather_keyword=None):
+    def __init__(self, data: npt.NDArray[np.float64], headers: Header, gather_keyword=None):
         """Initialize the instance using already prepared data.
 
         Args:
