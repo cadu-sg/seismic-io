@@ -22,10 +22,7 @@ jobs:
       run: sudo apt update
 
     - name: Install pip
-      run: sudo python3 -m ensurepip --upgrade
-
-    - name: Install setuptools
-      run: sudo python3 -m pip install --upgrade setuptools
+      run: sudo apt install -y python3-pip python3-wheel python3-setuptools
 
     - name: Install build dependencies
       run: sudo python3 -m pip install -r requirements.txt
