@@ -28,7 +28,7 @@ jobs:
       run: sudo python3 -m pip install -r requirements.txt
 
     - name: Install twine
-      run: sudo python3 -m pip install --upgrade build twine
+      run: sudo python3 -m pip install --upgrade build twine==6.0.1
 
     # Build
     - name: Upgrade release version
