@@ -22,13 +22,16 @@ jobs:
       run: sudo apt update
 
     - name: Install pip
-      run: sudo apt install -y python3-pip
+      run: sudo python3 -m ensurepip --upgrade
+
+    - name: Install setuptools
+      run: sudo python3 -m pip install --upgrade setuptools
 
     - name: Install build dependencies
-      run: pip3 install -r requirements.txt
+      run: sudo python3 -m pip install -r requirements.txt
 
     - name: Install twine
-      run: python3 -m pip install build twine
+      run: sudo python3 -m pip install --upgrade build twine
 
     # Build
     - name: Upgrade release version
