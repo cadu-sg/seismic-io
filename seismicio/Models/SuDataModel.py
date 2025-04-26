@@ -115,7 +115,7 @@ class SuFile:
           headers: Trace headers for this instance.
           gather_keyword: Header keyword that comprises the gathers.
         """
-        self.traces = data
+        self.data = data
         self.headers = headers
         self.num_traces = data.shape[1]
         self.gather_keyword = gather_keyword
